@@ -1,5 +1,6 @@
 // Copyright (C) 2019 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
+// Qt-Security score:significant reason:default
 
 #ifndef QHTTPSERVERRESPONDER_H
 #define QHTTPSERVERRESPONDER_H
@@ -154,6 +155,8 @@ public:
     Q_HTTPSERVER_EXPORT void writeEndChunked(const QByteArray &data, const QHttpHeaders &trailers);
 
     Q_HTTPSERVER_EXPORT void writeEndChunked(const QByteArray &data);
+
+    Q_HTTPSERVER_EXPORT bool isResponseCanceled() const;
 
 private:
     Q_HTTPSERVER_EXPORT QHttpServerResponder(QHttpServerStream *stream);

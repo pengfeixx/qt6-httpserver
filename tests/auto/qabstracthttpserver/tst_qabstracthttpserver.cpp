@@ -34,6 +34,8 @@
 #include <QtNetwork/private/qhttp2connection_p.h>
 #endif
 
+#include <QtTest/private/qtesthelpers_p.h>
+
 #if QT_CONFIG(ssl)
 
 constexpr char g_privateKey[] = R"(-----BEGIN RSA PRIVATE KEY-----
@@ -151,6 +153,7 @@ private slots:
     void http2handshake();
     void http2request();
     void socketDisconnected();
+    void keepAliveTimeout();
 
 private:
 #if QT_CONFIG(ssl)
@@ -214,13 +217,13 @@ void tst_QAbstractHttpServer::request()
             Q_ASSERT(false);
         }
     } server;
-    auto tcpServer = new QTcpServer;
-    QVERIFY(tcpServer->listen());
-    server.bind(tcpServer);
+    QTcpServer tcpServer;
+    QVERIFY(tcpServer.listen());
+    server.bind(&tcpServer);
     QNetworkAccessManager networkAccessManager;
     QUrl url(QStringLiteral("http://%1:%2%3")
              .arg(host)
-             .arg(tcpServer->serverPort())
+             .arg(tcpServer.serverPort())
              .arg(path));
     if (!query.isEmpty())
         url.setQuery(query);
@@ -246,10 +249,10 @@ void tst_QAbstractHttpServer::checkListenWarns()
             Q_ASSERT(false);
         }
     } server;
-    auto tcpServer = new QTcpServer;
+    QTcpServer tcpServer;
     QTest::ignoreMessage(QtWarningMsg,
                          QRegularExpression(QStringLiteral("The TCP server .* is not listening.")));
-    server.bind(tcpServer);
+    server.bind(&tcpServer);
 }
 
 void tst_QAbstractHttpServer::websocket()
@@ -275,26 +278,67 @@ void tst_QAbstractHttpServer::websocket()
                 Q_UNUSED(request);
                 return QHttpServerWebSocketUpgradeResponse::accept();
             });
-    auto tcpServer = new QTcpServer;
-    tcpServer->listen();
-    server.bind(tcpServer);
-    auto makeWebSocket = [this, tcpServer]() mutable {
+    QTcpServer tcpServer;
+    tcpServer.listen();
+    server.bind(&tcpServer);
+    auto makeWebSocket = [this, &tcpServer]() mutable {
         auto s = std::make_unique<QWebSocket>(QString::fromUtf8(""),
                                               QWebSocketProtocol::VersionLatest, this);
-        const QUrl url(QString::fromLatin1("ws://localhost:%1").arg(tcpServer->serverPort()));
+        const QUrl url(QString::fromLatin1("ws://localhost:%1").arg(tcpServer.serverPort()));
         s->open(url);
         return s;
     };
 
     // We have to send two requests to make sure that swapping between
     // QTcpSocket and QWebSockets works correctly
-    auto s1 = makeWebSocket();
-    auto s2 = makeWebSocket();
+    auto clientSocket1 = makeWebSocket();
+    auto clientSocket2 = makeWebSocket();
+    QVERIFY(clientSocket1);
+    QVERIFY(clientSocket2);
 
     QSignalSpy newConnectionSpy(&server, &HttpServer::newWebSocketConnection);
     QTRY_COMPARE(newConnectionSpy.size(), 2);
-    server.nextPendingWebSocketConnection();
-    server.nextPendingWebSocketConnection();
+
+    std::unique_ptr<QWebSocket> serverSocket1(server.nextPendingWebSocketConnection());
+    QVERIFY(serverSocket1);
+    std::unique_ptr<QWebSocket> serverSocket2(server.nextPendingWebSocketConnection());
+    QVERIFY(serverSocket2);
+
+    QSignalSpy serverSocket1Spy(serverSocket1.get(), &QWebSocket::textMessageReceived);
+    QSignalSpy serverSocket2Spy(serverSocket2.get(), &QWebSocket::textMessageReceived);
+    QSignalSpy clientSocket1Spy(clientSocket1.get(), &QWebSocket::textMessageReceived);
+    QSignalSpy clientSocket2Spy(clientSocket2.get(), &QWebSocket::textMessageReceived);
+
+    // Check that all WebSockets are ready for read/write
+    QTRY_VERIFY(serverSocket1->isValid());
+    QTRY_VERIFY(serverSocket2->isValid());
+    QTRY_VERIFY(clientSocket1->isValid());
+    QTRY_VERIFY(clientSocket2->isValid());
+
+    serverSocket1->sendTextMessage("Server to Client");
+    serverSocket2->sendTextMessage("Server to Client");
+    clientSocket1->sendTextMessage("Client to Server");
+    clientSocket2->sendTextMessage("Client to Server");
+
+    QTRY_COMPARE(clientSocket1Spy.size(), 1);
+    QList<QVariant> clientSocket1Incoming = clientSocket1Spy.takeFirst();
+    QCOMPARE(clientSocket1Incoming.at(0).typeId(), QMetaType::QString);
+    QCOMPARE(clientSocket1Incoming.at(0).toString(), "Server to Client");
+
+    QTRY_COMPARE(clientSocket2Spy.size(), 1);
+    QList<QVariant> clientSocket2Incoming = clientSocket2Spy.takeFirst();
+    QCOMPARE(clientSocket2Incoming.at(0).typeId(), QMetaType::QString);
+    QCOMPARE(clientSocket2Incoming.at(0).toString(), "Server to Client");
+
+    QTRY_COMPARE(serverSocket1Spy.size(), 1);
+    QList<QVariant> serverSocket1Incoming = serverSocket1Spy.takeFirst();
+    QCOMPARE(serverSocket1Incoming.at(0).typeId(), QMetaType::QString);
+    QCOMPARE(serverSocket1Incoming.at(0).toString(), "Client to Server");
+
+    QTRY_COMPARE(serverSocket2Spy.size(), 1);
+    QList<QVariant> serverSocket2Incoming = serverSocket2Spy.takeFirst();
+    QCOMPARE(serverSocket2Incoming.at(0).typeId(), QMetaType::QString);
+    QCOMPARE(serverSocket2Incoming.at(0).toString(), "Client to Server");
 #endif // defined(QT_WEBSOCKETS_LIB)
 }
 
@@ -374,6 +418,11 @@ void tst_QAbstractHttpServer::verifyWebSocketUpgrades()
     tcpServer.listen();
     server.bind(&tcpServer);
 #if QT_CONFIG(ssl)
+    if (QTestPrivate::isSecureTransportBlockingTest()) {
+        // We were built with SDK below 15, but a file-based keychains are not working anymore on macOS 15...
+        QSKIP("This test will block in keychain access");
+    }
+
     QSslServer sslServer;
     QSslConfiguration sslConfiguration = QSslConfiguration::defaultConfiguration();
     sslConfiguration.setLocalCertificate(QSslCertificate(QByteArray(g_certificate)));
@@ -512,18 +561,18 @@ void tst_QAbstractHttpServer::servers()
             Q_ASSERT(false);
         }
     } server;
-    auto tcpServer = new QTcpServer;
-    tcpServer->listen();
-    server.bind(tcpServer);
-    auto tcpServer2 = new QTcpServer;
-    tcpServer2->listen();
-    server.bind(tcpServer2);
+    QTcpServer tcpServer;
+    tcpServer.listen();
+    server.bind(&tcpServer);
+    QTcpServer tcpServer2;
+    tcpServer2.listen();
+    server.bind(&tcpServer2);
     QTRY_COMPARE(server.servers().size(), 2);
     QTRY_COMPARE(server.serverPorts().size(), 2);
-    QTRY_COMPARE(server.servers().first(), tcpServer);
-    QTRY_COMPARE(server.serverPorts().first(), tcpServer->serverPort());
-    QTRY_COMPARE(server.servers().last(), tcpServer2);
-    QTRY_COMPARE(server.serverPorts().last(), tcpServer2->serverPort());
+    QTRY_COMPARE(server.servers().first(), &tcpServer);
+    QTRY_COMPARE(server.serverPorts().first(), tcpServer.serverPort());
+    QTRY_COMPARE(server.servers().last(), &tcpServer2);
+    QTRY_COMPARE(server.serverPorts().last(), tcpServer2.serverPort());
 }
 
 void tst_QAbstractHttpServer::qtbug82053()
@@ -540,12 +589,12 @@ void tst_QAbstractHttpServer::qtbug82053()
 
         void missingHandler(const QHttpServerRequest &, QHttpServerResponder &) override { }
     } server;
-    auto tcpServer = new QTcpServer;
-    tcpServer->listen();
-    server.bind(tcpServer);
+    QTcpServer tcpServer;
+    tcpServer.listen();
+    server.bind(&tcpServer);
 
     QTcpSocket client;
-    client.connectToHost(QHostAddress::LocalHost, tcpServer->serverPort());
+    client.connectToHost(QHostAddress::LocalHost, tcpServer.serverPort());
     client.waitForConnected();
     client.write("CONNECT / HTTP/1.1\n\n");
     client.waitForBytesWritten();
@@ -804,10 +853,11 @@ void tst_QAbstractHttpServer::socketDisconnected()
     QSignalSpy settingsFrameReceivedSpy{ connection, &QHttp2Connection::settingsFrameReceived };
     connect(socket.get(), &QIODevice::readyRead, connection, &QHttp2Connection::handleReadyRead);
     connection->handleReadyRead();
-    QVERIFY(settingsFrameReceivedSpy.wait());
 
     auto stream = connection->createStream().unwrap();
     QVERIFY(stream);
+
+    QVERIFY(settingsFrameReceivedSpy.wait());
 
     // disconnect while request is being processed on server
     QTimer timer;
@@ -831,6 +881,112 @@ void tst_QAbstractHttpServer::socketDisconnected()
 
 #else
     QSKIP("TLS/SSL is not available, skipping test");
+#endif // QT_CONFIG(ssl)
+}
+
+void tst_QAbstractHttpServer::keepAliveTimeout()
+{
+    struct HttpServer : QAbstractHttpServer
+    {
+        bool handleRequest(const QHttpServerRequest &, QHttpServerResponder &responder) override
+        {
+            auto _responder = std::move(responder);
+            return true;
+        }
+
+        void missingHandler(const QHttpServerRequest &, QHttpServerResponder &) override
+        {
+            Q_ASSERT(false);
+        }
+    } server;
+
+    QTcpServer tcpServer;
+    tcpServer.listen();
+    server.bind(&tcpServer);
+
+    QHttpServerConfiguration config;
+    config.setKeepAliveTimeout(2s);
+    server.setConfiguration(config);
+
+    // Test HTTP/1 connection
+
+    QTcpSocket client;
+    client.connectToHost(QHostAddress::LocalHost, tcpServer.serverPort());
+    QVERIFY(client.waitForConnected());
+
+    client.write("GET / HTTP/1.1\r\nConnection: keep-alive\r\n\r\n");
+    client.waitForBytesWritten();
+
+    // sending another request before timeout
+    client.write("GET / HTTP/1.1\r\nConnection: keep-alive\r\n\r\n");
+    client.waitForBytesWritten();
+    QCOMPARE(client.state(), QAbstractSocket::ConnectedState);
+
+    // wait past the timeout
+    QTRY_COMPARE_WITH_TIMEOUT(client.state(), QAbstractSocket::UnconnectedState, 6000);
+
+#if QT_CONFIG(ssl)
+    if (!hasServerAlpn)
+        return;
+
+    // Test HTTP/2 connection
+
+    auto sslserver = std::make_unique<QSslServer>();
+    QSslConfiguration serverConfig = QSslConfiguration::defaultConfiguration();
+    serverConfig.setLocalCertificate(QSslCertificate(g_certificate));
+    serverConfig.setPrivateKey(QSslKey(g_privateKey, QSsl::Rsa));
+    serverConfig.setAllowedNextProtocols({ QSslConfiguration::ALPNProtocolHTTP2 });
+    sslserver->setSslConfiguration(serverConfig);
+    QVERIFY2(sslserver->listen(QHostAddress::LocalHost), "HTTPS server listen failed");
+    QVERIFY2(server.bind(sslserver.get()), "HTTPS server bind failed");
+    sslserver.release();
+
+    const auto serverPtr = server.servers().constLast();
+
+    // create two HTTP/2 connections
+    QSslSocketPtr socket1 = createNewConnection(serverPtr);
+    QVERIFY(socket1->isEncrypted());
+    QCOMPARE(socket1->state(), QAbstractSocket::ConnectedState);
+
+    QSslSocketPtr socket2 = createNewConnection(serverPtr);
+    QVERIFY(socket2->isEncrypted());
+    QCOMPARE(socket2->state(), QAbstractSocket::ConnectedState);
+
+    QHttp2Connection *connection1 = QHttp2Connection::createDirectConnection(socket1.get(), {});
+    QVERIFY(connection1);
+    QHttp2Connection *connection2 = QHttp2Connection::createDirectConnection(socket2.get(), {});
+    QVERIFY(connection2);
+
+    // wait for HTTP/2 handshake
+    QSignalSpy settingsFrameReceivedSpy1{ connection1, &QHttp2Connection::settingsFrameReceived };
+    connect(socket1.get(), &QIODevice::readyRead, connection1, &QHttp2Connection::handleReadyRead);
+    connection1->handleReadyRead();
+
+    QSignalSpy settingsFrameReceivedSpy2{ connection2, &QHttp2Connection::settingsFrameReceived };
+    connect(socket2.get(), &QIODevice::readyRead, connection2, &QHttp2Connection::handleReadyRead);
+    connection2->handleReadyRead();
+
+    auto stream1 = connection1->createStream().unwrap();
+    QVERIFY(stream1);
+    QVERIFY(settingsFrameReceivedSpy1.wait());
+
+    auto stream2 = connection2->createStream().unwrap();
+    QVERIFY(stream2);
+    QVERIFY(settingsFrameReceivedSpy2.wait());
+
+    // send a request on socket1
+    HPack::HttpHeader headers = {
+                                  { ":authority", "example.com" },
+                                  { ":method", "GET" },
+                                  { ":path", "/" },
+                                  { ":scheme", "https" },
+                                };
+    stream1->sendHEADERS(headers, true);
+
+    // the idle socket should be closed after timeout
+    QTRY_VERIFY_WITH_TIMEOUT(socket2->state() == QAbstractSocket::UnconnectedState, 6000);
+    // the active connection should remain open
+    QVERIFY(socket1->state() == QAbstractSocket::ConnectedState);
 #endif // QT_CONFIG(ssl)
 }
 

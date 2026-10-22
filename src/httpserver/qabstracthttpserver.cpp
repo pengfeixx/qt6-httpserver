@@ -1,5 +1,6 @@
 // Copyright (C) 2022 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
+// Qt-Security score:significant reason:default
 
 #include <QtHttpServer/qabstracthttpserver.h>
 
@@ -13,8 +14,14 @@
 #include <QtCore/qloggingcategory.h>
 #include <QtNetwork/qtcpserver.h>
 #include <QtNetwork/qtcpsocket.h>
+#if QT_CONFIG(ssl) && QT_CONFIG(http)
+#include <QtNetwork/private/qhttp2connection_p.h>
+#endif
+
+#if QT_CONFIG(localserver)
 #include <QtNetwork/qlocalserver.h>
 #include <QtNetwork/qlocalsocket.h>
+#endif
 
 #if QT_CONFIG(ssl)
 #include <QtNetwork/qsslserver.h>
@@ -28,13 +35,36 @@
 
 QT_BEGIN_NAMESPACE
 
-Q_LOGGING_CATEGORY(lcHttpServer, "qt.httpserver")
+Q_STATIC_LOGGING_CATEGORY(lcHttpServer, "qt.httpserver", QtWarningMsg)
+
+bool LessHostAddress::operator()(const QHostAddress &lhs, const QHostAddress &rhs) const
+{
+    bool lhsIsIPv4 = false;
+    bool rhsIsIPv4 = false;
+    quint32 lhsIpAddressV4 = lhs.toIPv4Address(&lhsIsIPv4);
+    quint32 rhsIpAddressV4 = rhs.toIPv4Address(&rhsIsIPv4);
+    if (lhsIsIPv4 != rhsIsIPv4)
+        return lhsIsIPv4;
+    if (lhsIsIPv4)
+        return lhsIpAddressV4 < rhsIpAddressV4;
+
+    Q_IPV6ADDR lhsIpAddressV6 = lhs.toIPv6Address();
+    Q_IPV6ADDR rhsIpAddressV6 = rhs.toIPv6Address();
+    for (int i = 0; i < 16; ++i) {
+        if (lhsIpAddressV6[i] != rhsIpAddressV6[i])
+            return lhsIpAddressV6[i] < rhsIpAddressV6[i];
+    }
+
+    return false;
+}
+
 
 /*!
     \internal
 */
 QAbstractHttpServerPrivate::QAbstractHttpServerPrivate()
 {
+    restartHeartbeatTimer();
 }
 
 /*!
@@ -49,9 +79,9 @@ void QAbstractHttpServerPrivate::handleNewConnections()
         while (auto socket = qobject_cast<QSslSocket *>(sslServer->nextPendingConnection())) {
             if (socket->sslConfiguration().nextNegotiatedProtocol()
                             == QSslConfiguration::ALPNProtocolHTTP2) {
-                new QHttpServerHttp2ProtocolHandler(q, socket);
+                createHttp2Handler(socket);
             } else {
-                new QHttpServerHttp1ProtocolHandler(q, socket);
+                createHttp1Handler(socket);
             }
         }
         return;
@@ -62,7 +92,7 @@ void QAbstractHttpServerPrivate::handleNewConnections()
     Q_ASSERT(tcpServer);
 
     while (auto socket = tcpServer->nextPendingConnection())
-        new QHttpServerHttp1ProtocolHandler(q, socket);
+        createHttp1Handler(socket);
 }
 
 /*!
@@ -78,6 +108,125 @@ bool QAbstractHttpServerPrivate::verifyThreadAffinity(const QObject *contextObje
     return true;
 }
 
+void QAbstractHttpServerPrivate::createHttp1Handler(QIODevice *socket)
+{
+    using namespace std::chrono_literals;
+    Q_Q(QAbstractHttpServer);
+
+    if (hasTooManyConnections(socket)) {
+        if (auto tcpSocket = qobject_cast<QTcpSocket *>(socket)) {
+            QByteArray buffer;
+            buffer.append("HTTP/1.1 429 Too Many Requests");
+            buffer.append("\r\nConnection: close\r\n\r\n");
+            tcpSocket->write(buffer);
+            tcpSocket->flush();
+            QTimer::singleShot(1s, tcpSocket, &QObject::deleteLater);
+        }
+        return;
+    }
+
+    auto handler = new QHttpServerHttp1ProtocolHandler(q, socket, &requestFilter, &configuration);
+    updateSocketCounter(socket);
+    QObject::connect(&heartbeatTimer, &QTimer::timeout,
+            handler, &QHttpServerHttp1ProtocolHandler::checkKeepAliveTimeout);
+}
+
+#if QT_CONFIG(ssl) && QT_CONFIG(http)
+void QAbstractHttpServerPrivate::createHttp2Handler(QIODevice *socket)
+{
+    using namespace std::chrono_literals;
+    Q_Q(QAbstractHttpServer);
+
+    if (hasTooManyConnections(socket)) {
+        if (auto tcpSocket = qobject_cast<QTcpSocket *>(socket)) {
+            auto *connection = QHttp2Connection::createDirectServerConnection(
+                                    socket, q->http2Configuration());
+            connection->close(Http2::Http2Error::ENHANCE_YOUR_CALM);
+            QTimer::singleShot(1s, tcpSocket, &QObject::deleteLater);
+        }
+        return;
+    }
+
+    auto handler = new QHttpServerHttp2ProtocolHandler(q, socket, &requestFilter);
+    updateSocketCounter(socket);
+    QObject::connect(&heartbeatTimer, &QTimer::timeout,
+            handler, &QHttpServerHttp2ProtocolHandler::checkKeepAliveTimeout);
+}
+#endif
+
+bool QAbstractHttpServerPrivate::hasTooManyConnections(QIODevice *socket)
+{
+    if (configuration.maximumConnections() != 0
+        && totalConnections >= configuration.maximumConnections())
+        return true;
+
+    if (configuration.maximumConnectionsPerHost() == 0)
+        return false;
+
+    if (auto tcpSocket = qobject_cast<QTcpSocket *>(socket)) {
+        auto foundNumberOfConnections = connectionsPerHost.find(tcpSocket->peerAddress());
+        if (foundNumberOfConnections != connectionsPerHost.end()) {
+            if (foundNumberOfConnections->second >= configuration.maximumConnectionsPerHost()) {
+                qCInfo(lcHttpServer) << "QAbstractHttpServer:"
+                                     << "closing socket: too many connections from"
+                                     << tcpSocket->peerAddress().toString();
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+void QAbstractHttpServerPrivate::updateSocketCounter(QIODevice *socket)
+{
+    // If there are no limits on connections per host or in total, there's no point in tracking
+    // the amount of connections, so we skip doing so.
+    if (configuration.maximumConnectionsPerHost() == 0 && configuration.maximumConnections() == 0)
+        return;
+
+    if (auto tcpSocket = qobject_cast<QTcpSocket *>(socket)) {
+        auto [it, _] = connectionsPerHost.try_emplace(tcpSocket->peerAddress(), 0);
+        ++(it->second);
+        ++totalConnections;
+        QObjectPrivate::connect(tcpSocket, &QAbstractSocket::disconnected, this,
+                                &QAbstractHttpServerPrivate::socketDisconnected);
+    }
+}
+
+void QAbstractHttpServerPrivate::socketDisconnected()
+{
+
+    Q_Q(QAbstractHttpServer);
+    if (auto tcpSocket = qobject_cast<QTcpSocket *>(q->sender())) {
+        --totalConnections;
+        auto foundNumberOfConnections = connectionsPerHost.find(tcpSocket->peerAddress());
+        if (foundNumberOfConnections != connectionsPerHost.end()) {
+            if (foundNumberOfConnections->second == 1)
+                connectionsPerHost.erase(foundNumberOfConnections);
+            else
+                --(foundNumberOfConnections->second);
+        }
+    }
+}
+
+#if QT_CONFIG(ssl)
+void QAbstractHttpServerPrivate::handleStartedEncryptionHandshake(QSslSocket *socket)
+{
+    if (hasTooManyConnections(socket))
+        socket->close();
+}
+#endif
+
+void QAbstractHttpServerPrivate::restartHeartbeatTimer()
+{
+    if (heartbeatTimer.isActive())
+        heartbeatTimer.stop();
+
+    const auto timerInterval = qMax(configuration.keepAliveTimeout() / 2,
+                                    std::chrono::seconds(5));
+    heartbeatTimer.start(timerInterval);
+}
+
 
 #if QT_CONFIG(localserver)
 /*!
@@ -90,7 +239,7 @@ void QAbstractHttpServerPrivate::handleNewLocalConnections()
     Q_ASSERT(localServer);
 
     while (auto socket = localServer->nextPendingConnection())
-        new QHttpServerHttp1ProtocolHandler(q, socket);
+        createHttp1Handler(socket);
 }
 #endif
 
@@ -104,7 +253,7 @@ void QAbstractHttpServerPrivate::handleNewLocalConnections()
     create an HTTP server. Use bind() to start listening to all the incoming
     connections to a server.
 
-    This is a low level API, see \l QHttpServer for a highler level API to
+    This is a low level API, see \l QHttpServer for a higher level API to
     implement an HTTP server.
 */
 
@@ -154,13 +303,13 @@ QList<quint16> QAbstractHttpServer::serverPorts() const
 }
 
 /*!
-    Bind the HTTP server to given TCP \a server over which
-    the transmission happens. It is possible to call this function
+    Bind the given TCP \a server, over which the transmission happens,
+    to the HTTP server. It is possible to call this function
     multiple times with different instances of TCP \a server to
     handle multiple connections and ports, for example both SSL and
     non-encrypted connections.
 
-    After calling this function, every _new_ connection will be
+    After calling this function, every \e new connection will be
     handled and forwarded by the HTTP server.
 
     It is the user's responsibility to call QTcpServer::listen() on
@@ -190,17 +339,24 @@ bool QAbstractHttpServer::bind(QTcpServer *server)
     QObjectPrivate::connect(server, &QTcpServer::pendingConnectionAvailable, d,
                             &QAbstractHttpServerPrivate::handleNewConnections,
                             Qt::UniqueConnection);
+#if QT_CONFIG(ssl)
+    if (auto *sslServer = qobject_cast<QSslServer *>(server)) {
+         QObjectPrivate::connect(sslServer,&QSslServer::startedEncryptionHandshake, d,
+                                 &QAbstractHttpServerPrivate::handleStartedEncryptionHandshake,
+                                 Qt::UniqueConnection);
+    }
+#endif
     return true;
 }
 
 #if QT_CONFIG(localserver)
 /*!
-    Bind the HTTP server to given QLocalServer \a server over which
-    the transmission happens. It is possible to call this function
+    Bind the given QLocalServer \a server, over which the transmission
+    happens, to the HTTP server. It is possible to call this function
     multiple times with different instances of \a server to
     handle multiple connections.
 
-    After calling this function, every _new_ connection will be
+    After calling this function, every \e new connection will be
     handled and forwarded by the HTTP server.
 
     It is the user's responsibility to call QLocalServer::listen() on
@@ -233,7 +389,7 @@ bool QAbstractHttpServer::bind(QLocalServer *server)
 #endif
 
 /*!
-    Returns the TCP servers of this HTTP server.
+    Returns the TCP and SSL servers this HTTP server will handle connections from.
 
     \sa serverPorts()
  */
@@ -315,21 +471,22 @@ QAbstractHttpServer::verifyWebSocketUpgrade(const QHttpServerRequest &request) c
 }
 
 /*!
-    \fn template <typename Handler, QAbstractHttpServer::if_compatible_callable<Handler> = true> void QAbstractHttpServer::addWebSocketUpgradeVerifier(const typename QtPrivate::ContextTypeForFunctor<Handler>::ContextType *context, Handler &&func)
+    \fn template <typename Handler> void QAbstractHttpServer::addWebSocketUpgradeVerifier(const QObject *context, Handler &&func)
 
     Adds a callback function \a func that verifies incoming WebSocket
-    upgrades using the context object \a context. Upgrade attempts
-    succeed if at least one of the registered callback functions returns
-    \c Accept and a handler returning \c Deny has not been executed before
-    it. If no handlers are registered or all return \c PassToNext,
-    missingHandler() is called. The callback functions are executed in the
-    order they are registered. The callbacks cannot call
-    addWebSocketUpgradeVerifier().
+    upgrades. It is called using the provided \a context object.
+    An upgrade succeeds if at least one registered callback returns
+    \l{QHttpServerWebSocketUpgradeResponse::ResponseType::}{Accept} and
+    no prior callback has returned
+    \l{QHttpServerWebSocketUpgradeResponse::ResponseType::}{Deny}. If no
+    callbacks are registered, or all return
+    \l{QHttpServerWebSocketUpgradeResponse::ResponseType::}{PassToNext},
+    the missingHandler() function is called. Callbacks are executed in the
+    order they were registered, and they cannot call this function
+    themselves.
 
-    \note The WebSocket upgrades fail if no callbacks has been registered.
-    \note This overload participates in overload resolution only if the
-    callback function takes a \c const QHttpServerRequest & as an argument
-    and returns a QHttpServerWebSocketUpgradeResponse.
+    \note The \a func has to implement the signature
+    \c{QHttpServerWebSocketUpgradeResponse (*)(const QHttpServerRequest &)}.
 
     \code
     server.addWebSocketUpgradeVerifier(
@@ -371,8 +528,6 @@ void QAbstractHttpServer::addWebSocketUpgradeVerifierImpl(const QObject *context
     the \a request and sending the appropriate response back to \a responder.
     Return \c true if the \a request was handled successfully. If this method
     returns \c false, missingHandler() will be called afterwards.
-
-    This function must move out of \a responder before returning \c true.
 */
 
 /*!
@@ -419,6 +574,37 @@ void QAbstractHttpServer::setHttp2Configuration(const QHttp2Configuration &confi
 }
 
 #endif
+
+/*!
+    \since 6.9
+
+    Sets this server's general configuration parameters to \a config.
+
+    \note The new configuration will be applied both to already established
+    connections and all next connections.
+
+    \sa configuration()
+*/
+void QAbstractHttpServer::setConfiguration(const QHttpServerConfiguration &config)
+{
+    Q_D(QAbstractHttpServer);
+    d->configuration = config;
+    d->requestFilter.setConfiguration(config);
+    d->restartHeartbeatTimer();
+}
+
+/*!
+    \since 6.9
+
+    Returns this server's general configuration parameters.
+
+    \sa setConfiguration()
+*/
+QHttpServerConfiguration QAbstractHttpServer::configuration() const
+{
+    Q_D(const QAbstractHttpServer);
+    return d->configuration;
+}
 
 QT_END_NAMESPACE
 

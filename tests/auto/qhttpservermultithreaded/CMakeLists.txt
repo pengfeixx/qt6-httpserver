@@ -6,8 +6,11 @@
 #####################################################################
 
 qt_internal_add_test(tst_qhttpservermultithreaded
+    DEFINES
+        QTEST_THROW_ON_FAIL
+        QTEST_THROW_ON_SKIP
     SOURCES
         tst_qhttpservermultithreaded.cpp
     LIBRARIES
-        Qt::HttpServer Qt::Concurrent
+        Qt::HttpServer Qt::Concurrent Qt::TestPrivate
 )

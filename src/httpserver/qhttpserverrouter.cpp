@@ -1,5 +1,6 @@
 // Copyright (C) 2019 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
+// Qt-Security score:significant reason:default
 
 #include "qhttpserverrouter_p.h"
 
@@ -15,7 +16,7 @@
 
 QT_BEGIN_NAMESPACE
 
-Q_LOGGING_CATEGORY(lcRouter, "qt.httpserver.router")
+Q_STATIC_LOGGING_CATEGORY(lcRouter, "qt.httpserver.router")
 
 using namespace Qt::StringLiterals;
 
@@ -47,21 +48,22 @@ static const QHash<QMetaType, QString> defaultConverters = {
 /*!
     \class QHttpServerRouter
     \since 6.4
-    \brief Provides functions to bind a URL to a \c ViewHandler.
+    \brief Provides functions to bind a path to a \c ViewHandler.
     \inmodule QtHttpServer
 
-    QHttpServerRouter is a class to distribute http requests to their
-    respective handlers with a rule based system.
+    QHttpServerRouter is a rule-based system for routing HTTP requests to
+    their appropriate handlers. You can add QHttpServerRouterRule
+    instances, which define a request path and its corresponding handler.
 
-    You can register new \l{QHttpServerRouterRule}{QHttpServerRouterRules},
-    that represent a request path and the respective handler. Variable parts in
-    the route can be specified with placeholder in the request path. The
-    handler gets the placeholders value as a \l QRegularExpressionMatch. The
+    Variable parts in the route can be specified with placeholders
+    (\c{"<arg>"}) in the request path, but it is not needed at the end. The
+    handler receives the matched values as a \l QRegularExpressionMatch. The
     arguments can be of any type for which a \l{converters}{converter} is
     available. The handler creation can be simplified with
-    QHttpServerRouterRule::bindCaptured. A QHttpServerRouter instance must not
-    be modifed by its rules.
+    \l QHttpServerRouterRule::bindCaptured().
 
+
+    \note A QHttpServerRouter instance must not be modifed by its rules.
     \note This is a low-level routing API for an HTTP server.
 
     Minimal example:
@@ -93,52 +95,37 @@ static const QHash<QMetaType, QString> defaultConverters = {
     Adds a new converter for \e Type that can be parsed with \a regexp, and
     returns \c true if this was successful, otherwise returns \c false. If
     successful, the registered type can be used as argument in handlers for
-    \l{QHttpServerRouterRule}. The regular expression will be used to parse the
-    path pattern of the rule.
+    \l{QHttpServerRouterRule}. The regular expression will be used to parse
+    the path pattern of the rule.
 
     If there is already a converter of type \e Type, that converter's regexp
     is replaced with \a regexp.
 
-    Minimal example:
-    \code
-    struct CustomArg {
-        int data = 10;
+    Custom converters can extend the available type conversions through the
+    \l QMetaType system.
 
-        CustomArg() {} ;
-        CustomArg(const QString &urlArg) : data(urlArg.toInt()) {}
-    };
-    Q_DECLARE_METATYPE(CustomArg);
+    Define a class with a QString constructor:
+    \snippet custom-converter/main.cpp Define class
 
-    QHttpServerRouter router;
-    router.addConverter<CustomArg>(u"[+-]?\\d+"));
+    To use a custom type with the \l{QHttpServer}{HTTP server}, register
+    it using this function and define a \l{QHttpServer::}{route} handler
+    using the new type:
+    \snippet custom-converter/main.cpp Add converter and route
 
-    auto pageView = [] (const CustomArg &customArg) {
-        qDebug("data: %d", customArg.data);
-    };
-    using ViewHandler = decltype(pageView);
-
-    auto rule = std::make_unique<QHttpServerRouterRule>(
-        "/<arg>/log",
-        [&router, &pageView] (QRegularExpressionMatch &match,
-                              const QHttpServerRequest &request,
-                              QHttpServerResponder &&responder) {
-        // Bind and call viewHandler with match's captured string and quint32:
-        QHttpServerRouterRule::bindCaptured(pageView, match)();
-    });
-
-    router.addRule<ViewHandler>(std::move(rule));
-    \endcode
+    \sa converters, clearConverters
 */
 
-/*! \fn template <typename ViewHandler, typename ViewTraits = QHttpServerRouterViewTraits<ViewHandler>> bool QHttpServerRouter::addRule(std::unique_ptr<QHttpServerRouterRule> rule)
+/*! \fn template <typename ViewHandler, typename ViewTraits = QHttpServerRouterViewTraits<ViewHandler>> QHttpServerRouterRule *QHttpServerRouter::addRule(std::unique_ptr<QHttpServerRouterRule> rule)
     Adds a new \a rule to the router.
 
-    Returns a pointer to the new rule if successful or \c nullptr otherwise.
+    Returns a pointer to the new rule if successful; otherwise returns
+    \c nullptr.
 
     Inside addRule, we determine ViewHandler arguments and generate a list of
-    their QMetaType::Type ids. Then we parse the URL and replace each \c <arg>
-    with a regexp for its type from the list. The \a rule must not modify the
-    QHttpServerRouter instance.
+    their QMetaType::Type ids. Then we parse the path and replace each
+    \c{"<arg>"} with a regexp for its type from the list.
+
+    The provided \a rule must not modify the QHttpServerRouter instance.
 
     \code
     QHttpServerRouter router;

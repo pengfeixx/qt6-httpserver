@@ -1,6 +1,7 @@
 // Copyright (C) 2020 Mikhail Svetkin <mikhail.svetkin@gmail.com>
 // Copyright (C) 2019 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
+// Qt-Security score:significant reason:default
 
 #ifndef QHTTPSERVERROUTERVIEWTRAITS_H
 #define QHTTPSERVERROUTERVIEWTRAITS_H
@@ -21,26 +22,32 @@ struct RouterViewTraitsHelper : ViewTraits<ViewHandler, DisableStaticAssert> {
 
     template<int I>
     struct ArgumentChecker : FunctionTraits::template Arg<I> {
-        using IsRequest = typename VTraits::template Special<I, const QHttpServerRequest &>;
-        static_assert(IsRequest::AssertCondition,
+        using IsRequestCLvalue = typename VTraits::template Special<I, const QHttpServerRequest &>;
+        using IsRequestValue = typename VTraits::template Special<I, QHttpServerRequest>;
+        using IsRequest = CheckAny<IsRequestCLvalue, IsRequestValue>;
+        static_assert(IsRequest::StaticAssert,
                       "ViewHandler arguments error: "
-                      "QHttpServerRequest can only be passed as a const reference");
+                      "QHttpServerRequest can only be passed by value or as a const Lvalue");
 
-        using IsResponder = typename VTraits::template Special<I, QHttpServerResponder &>;
-        static_assert(IsResponder::AssertCondition,
+        using IsResponderLvalue = typename VTraits::template Special<I, QHttpServerResponder &>;
+        using IsResponderRvalue = typename VTraits::template Special<I, QHttpServerResponder &&>;
+        using IsResponder = CheckAny<IsResponderLvalue, IsResponderRvalue>;
+        static_assert(IsResponder::StaticAssert,
                       "ViewHandler arguments error: "
-                      "QHttpServerResponder can only be passed as a reference");
+                      "QHttpServerResponder can only be passed as a reference or Rvalue "
+                      "reference");
 
         using IsSpecial = CheckAny<IsRequest, IsResponder>;
 
         struct IsSimple {
-            static constexpr bool Value = !IsSpecial::Value &&
+            static constexpr bool TypeMatched = !IsSpecial::TypeMatched &&
                                            I < FunctionTraits::ArgumentCount &&
                                            FunctionTraits::ArgumentIndexMax != -1;
-            static constexpr bool Valid = FunctionTraits::template Arg<I>::CopyConstructible;
+            static constexpr bool Value =
+                    !IsSpecial::Value && FunctionTraits::template Arg<I>::CopyConstructible;
 
             static constexpr bool StaticAssert =
-                DisableStaticAssert || !Value || Valid;
+                DisableStaticAssert || Value || !TypeMatched;
 
 
             static_assert(StaticAssert,
@@ -50,13 +57,13 @@ struct RouterViewTraitsHelper : ViewTraits<ViewHandler, DisableStaticAssert> {
 
         using CheckOk = CheckAny<IsSimple, IsSpecial>;
 
-        static constexpr bool Valid = CheckOk::Valid;
+        static constexpr bool Value = CheckOk::Value;
         static constexpr bool StaticAssert = CheckOk::StaticAssert;
     };
 
 
     struct Arguments {
-        template<int ... I>
+        template<size_t ... I>
         struct ArgumentsReturn {
             template<int Idx>
             using Arg = ArgumentChecker<Idx>;
@@ -65,8 +72,9 @@ struct RouterViewTraitsHelper : ViewTraits<ViewHandler, DisableStaticAssert> {
             static constexpr QMetaType metaType() noexcept
             {
                 using Type = typename FunctionTraits::template Arg<Idx>::CleanType;
+                constexpr bool Simple = Arg<Idx>::IsSimple::Value;
 
-                if constexpr (std::conjunction_v<std::is_copy_constructible<Type>, std::is_copy_assignable<Type>>)
+                if constexpr (Simple && std::is_copy_assignable_v<Type>)
                     return QMetaType::fromType<Type>();
                 else
                     return QMetaType::fromType<void>();
@@ -74,26 +82,25 @@ struct RouterViewTraitsHelper : ViewTraits<ViewHandler, DisableStaticAssert> {
 
             static constexpr std::size_t Count = FunctionTraits::ArgumentCount;
             static constexpr std::size_t CapturableCount =
-                    (0 + ... + static_cast<std::size_t>(FunctionTraits::template Arg<I>::CopyConstructible));
+                    (0 + ... + static_cast<std::size_t>(Arg<I>::IsSimple::Value));
 
-            static constexpr std::size_t PlaceholdersCount = Count - CapturableCount;
+            static constexpr std::size_t SpecialsCount = Count - CapturableCount;
 
-            static constexpr bool Valid = (Arg<I>::Valid && ...);
+            static constexpr bool Value = (Arg<I>::Value && ...);
             static constexpr bool StaticAssert = (Arg<I>::StaticAssert && ...);
 
-            using Indexes = typename QtPrivate::IndexesList<I...>;
+            using Indexes = std::index_sequence<I...>;
 
-            using CapturableIndexes =
-                typename QtPrivate::Indexes<CapturableCount>::Value;
+            using CapturableIndexes = std::make_index_sequence<CapturableCount>;
 
-            using PlaceholdersIndexes =
-                typename QtPrivate::Indexes<PlaceholdersCount>::Value;
+            using SpecialIndexes = std::make_index_sequence<SpecialsCount>;
 
             using Last = Arg<FunctionTraits::ArgumentIndexMax>;
+            using SecondLast = Arg<FunctionTraits::ArgumentIndexMax - 1>;
         };
 
-        template<int ... I>
-        static constexpr ArgumentsReturn<I...> eval(QtPrivate::IndexesList<I...>) noexcept;
+        template<size_t ... I>
+        static constexpr ArgumentsReturn<I...> eval(std::index_sequence<I...>) noexcept;
     };
 
     template<int CaptureOffset>
@@ -106,9 +113,9 @@ struct RouterViewTraitsHelper : ViewTraits<ViewHandler, DisableStaticAssert> {
         template<int Id>
         using OffsetArg = typename FunctionTraits::template Arg<CaptureOffset + Id>::Type;
 
-        template<int ... Idx>
+        template<size_t ... Idx>
         static constexpr typename FunctionWrapper<OffsetArg<Idx>...>::Type
-                eval(QtPrivate::IndexesList<Idx...>) noexcept;
+                eval(std::index_sequence<Idx...>) noexcept;
     };
 };
 
@@ -121,9 +128,8 @@ struct QHttpServerRouterViewTraits
     using Helpers = typename QtPrivate::RouterViewTraitsHelper<ViewHandler, DisableStaticAssert>;
     using ReturnType = typename Helpers::FunctionTraits::ReturnType;
     using Arguments = decltype(Helpers::Arguments::eval(typename Helpers::ArgumentIndexes{}));
-    using BindableType = decltype(
-            Helpers::template BindType<Arguments::CapturableCount>::eval(
-                typename Arguments::PlaceholdersIndexes{}));
+    using BindableType = decltype(Helpers::template BindType<Arguments::CapturableCount>::eval(
+            typename Arguments::SpecialIndexes{}));
 };
 
 

@@ -1,6 +1,7 @@
 // Copyright (C) 2020 Mikhail Svetkin <mikhail.svetkin@gmail.com>
 // Copyright (C) 2019 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
+// Qt-Security score:significant reason:default
 
 #ifndef QHTTPSERVERVIEWTRAITS_IMPL_H
 #define QHTTPSERVERVIEWTRAITS_IMPL_H
@@ -24,7 +25,7 @@ struct FunctionTraitsHelper
     static constexpr const int ArgumentIndexMax = ArgumentCount - 1;
     using ReturnType = ReturnT;
 
-    template <int I>
+    template <size_t I>
     struct Arg {
         using Type = typename std::tuple_element<I, std::tuple<Args...>>::type;
 
@@ -65,14 +66,14 @@ using FunctionTraits = FunctionTraitsImpl<std::decay_t<T>>;
 template<typename ... T>
 struct CheckAny {
     static constexpr bool Value = (T::Value || ...);
-    static constexpr bool Valid = (T::Valid || ...);
+    static constexpr bool TypeMatched = (T::TypeMatched || ...);
     static constexpr bool StaticAssert = (T::StaticAssert || ...);
 };
 
 template<typename ViewHandler, bool DisableStaticAssert>
 struct ViewTraits {
     using FTraits = FunctionTraits<ViewHandler>;
-    using ArgumentIndexes = typename Indexes<FTraits::ArgumentCount>::Value;
+    using ArgumentIndexes = typename std::make_index_sequence<FTraits::ArgumentCount>;
 
     template<int I, typename Special>
     struct SpecialHelper {
@@ -98,14 +99,14 @@ struct ViewTraits {
         static_assert(AssertConditionOrder,
                       "ViewHandler arguments error: "
                       "QHttpServerRequest or QHttpServerResponder"
-                      " can only be the last argument");
+                      " can only be one of the two last arguments");
     };
 
     template<int I, typename T>
     struct Special {
         using Helper = SpecialHelper<I, T>;
-        static constexpr bool Value = Helper::TypeMatched;
-        static constexpr bool Valid = Helper::ValidAll;
+        static constexpr bool Value = Helper::ValidAll;
+        static constexpr bool TypeMatched = Helper::TypeMatched;
         static constexpr bool StaticAssert = Helper::StaticAssert;
         static constexpr bool AssertCondition = Helper::AssertCondition;
     };

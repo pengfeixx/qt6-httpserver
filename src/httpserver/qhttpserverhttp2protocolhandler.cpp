@@ -1,10 +1,12 @@
 // Copyright (C) 2024 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
+// Qt-Security score:significant reason:default
 
 #include "qhttpserverhttp2protocolhandler_p.h"
 
 #include <QtCore/qloggingcategory.h>
 #include <QtHttpServer/qabstracthttpserver.h>
+#include <QtHttpServer/qhttpserverresponse.h>
 #include <QtNetwork/private/qhttp2connection_p.h>
 #include <QtNetwork/qtcpsocket.h>
 
@@ -14,7 +16,7 @@
 
 QT_BEGIN_NAMESPACE
 
-Q_LOGGING_CATEGORY(lcHttpServerHttp2Handler, "qt.httpserver.http2handler")
+Q_STATIC_LOGGING_CATEGORY(lcHttpServerHttp2Handler, "qt.httpserver.http2handler")
 
 namespace {
 
@@ -22,7 +24,7 @@ void toHeaderPairs(HPack::HttpHeader &fields, const QHttpHeaders &headers)
 {
     for (qsizetype i = 0; i < headers.size(); ++i) {
         const auto name = headers.nameAt(i);
-        fields.push_back(HPack::HeaderField(QByteArray(name.data(), name.size()),
+        fields.push_back(HPack::HeaderField(QByteArray(name.data(), name.size()).toLower(),
                                             headers.valueAt(i).toByteArray()));
     }
 }
@@ -30,12 +32,13 @@ void toHeaderPairs(HPack::HttpHeader &fields, const QHttpHeaders &headers)
 } // anonymous namespace
 
 QHttpServerHttp2ProtocolHandler::QHttpServerHttp2ProtocolHandler(QAbstractHttpServer *server,
-                                                                 QIODevice *socket)
-    : QHttpServerStream(server),
+                                                                 QIODevice *socket,
+                                                                 QHttpServerRequestFilter *filter)
+    : QHttpServerStream(socket, filter, server),
       m_server(server),
       m_socket(socket),
       m_tcpSocket(qobject_cast<QTcpSocket *>(socket)),
-      m_request(QHttpServerStream::initRequestFromSocket(m_tcpSocket))
+      m_filter(filter)
 {
     socket->setParent(this);
 
@@ -65,11 +68,15 @@ QHttpServerHttp2ProtocolHandler::QHttpServerHttp2ProtocolHandler(QAbstractHttpSe
             &QHttp2Connection::newIncomingStream,
             this,
             &QHttpServerHttp2ProtocolHandler::onStreamCreated);
+
+    lastActiveTimer.start();
 }
 
-void QHttpServerHttp2ProtocolHandler::responderDestroyed()
+void QHttpServerHttp2ProtocolHandler::responderDestroyed(quint32 streamId)
 {
     m_responderCounter--;
+    disconnectResponder(streamId);
+    m_responders.remove(streamId);
 }
 
 void QHttpServerHttp2ProtocolHandler::startHandlingRequest()
@@ -99,6 +106,8 @@ void QHttpServerHttp2ProtocolHandler::write(const QByteArray &body, const QHttpH
 
     connect(stream, &QHttp2Stream::uploadFinished, buffer, &QObject::deleteLater);
     stream->sendDATA(buffer, true);
+    disconnectResponder(streamId);
+    m_responders.remove(streamId);
 }
 
 void QHttpServerHttp2ProtocolHandler::write(QHttpServerResponder::StatusCode status,
@@ -115,16 +124,18 @@ void QHttpServerHttp2ProtocolHandler::write(QHttpServerResponder::StatusCode sta
     bool isInfoStatus = QHttpServerResponder::StatusCode::Continue <= status
                         && status < QHttpServerResponder::StatusCode::Ok;
     writeHeadersAndStatus(headers, status, !isInfoStatus, streamId);
+    disconnectResponder(streamId);
+    m_responders.remove(streamId);
 }
 
 void QHttpServerHttp2ProtocolHandler::write(QIODevice *data, const QHttpHeaders &headers,
                                   QHttpServerResponder::StatusCode status, quint32 streamId)
 {
+    std::unique_ptr<QIODevice, QScopedPointerDeleteLater> input(data);
+
     QHttp2Stream *stream = getStream(streamId);
     if (!stream)
         return;
-
-    std::unique_ptr<QIODevice, QScopedPointerDeleteLater> input(data);
 
     if (!input->isOpen()) {
         if (!input->open(QIODevice::ReadOnly)) {
@@ -150,14 +161,11 @@ void QHttpServerHttp2ProtocolHandler::write(QIODevice *data, const QHttpHeaders 
 
     writeHeadersAndStatus(headers, status, false, streamId);
 
-    if (input->atEnd()) {
-        qCDebug(lcHttpServerHttp2Handler, "No more data available.");
-        return;
-    }
-
     input->setParent(stream);
     connect(stream, &QHttp2Stream::uploadFinished, input.get(), &QObject::deleteLater);
     stream->sendDATA(input.release(), true);
+    disconnectResponder(streamId);
+    m_responders.remove(streamId);
 }
 
 void QHttpServerHttp2ProtocolHandler::writeBeginChunked(const QHttpHeaders &headers,
@@ -177,6 +185,8 @@ void QHttpServerHttp2ProtocolHandler::writeEndChunked(const QByteArray &body,
                                                       quint32 streamId)
 {
     enqueueChunk(body, true, trailers, streamId);
+    disconnectResponder(streamId);
+    m_responders.remove(streamId);
 }
 
 void QHttpServerHttp2ProtocolHandler::enqueueChunk(const QByteArray &body, bool allEnqueued,
@@ -244,15 +254,30 @@ void QHttpServerHttp2ProtocolHandler::onStreamCreated(QHttp2Stream *stream)
         }
     };
 
-    auto &connections = m_streamConnections[id];
-    connections << connect(stream,
+    m_streamConnections[id] = {
+                   connect(stream,
                            &QHttp2Stream::stateChanged,
                            this,
                            onStateChanged,
-                           Qt::QueuedConnection);
+                           Qt::QueuedConnection),
 
-    connections << connect(stream, &QHttp2Stream::uploadFinished, this,
-                           [this, id]() { sendToStream(id); });
+                   connect(stream, &QHttp2Stream::uploadFinished, this,
+                           [this, id]() { sendToStream(id); }),
+
+                   connect(stream, &QHttp2Stream::headersReceived, this,
+                           [this, id](const HPack::HttpHeader &headers, bool endStream) {
+                               Q_UNUSED(endStream);
+                               onHeadersReceived(id, headers);
+                           }),
+
+                   connect(stream, &QHttp2Stream::dataReceived, this,
+                           [this, id](const QByteArray &data, bool endStream) {
+                               Q_UNUSED(endStream);
+                               onDataReceived(id, data.size());
+                           }),
+    };
+
+    lastActiveTimer.restart();
 }
 
 void QHttpServerHttp2ProtocolHandler::onStreamHalfClosed(quint32 streamId)
@@ -262,24 +287,149 @@ void QHttpServerHttp2ProtocolHandler::onStreamHalfClosed(quint32 streamId)
     if (!stream)
         return;
 
-    m_request.d->parse(stream);
+    auto requestReceived = parser.parse(stream);
+    if (!requestReceived)
+        return;
 
-    qCDebug(lcHttpServerHttp2Handler) << "Request:" << m_request;
+#if QT_CONFIG(ssl)
+    auto request = QHttpServerRequest::create(parser, sslConfiguration);
+#else
+    auto request = QHttpServerRequest::create(parser);
+#endif
+
+    qCDebug(lcHttpServerHttp2Handler) << "Request:" << request;
 
     QHttpServerResponder responder(this);
     responder.d_ptr->m_streamId = streamId;
+    connectResponder(responder.d_ptr);
+    m_responders.insert(streamId, responder.d_ptr);
 
-    if (!m_server->handleRequest(m_request, responder))
-        m_server->missingHandler(m_request, responder);
+    if (!m_filter->isRequestWithinRate(m_tcpSocket->peerAddress())) {
+        responder.sendResponse(
+                QHttpServerResponse(QHttpServerResponder::StatusCode::TooManyRequests));
+    } else if (!m_server->handleRequest(request, responder)) {
+        m_server->missingHandler(request, responder);
+    }
 }
 
 void QHttpServerHttp2ProtocolHandler::onStreamClosed(quint32 streamId)
 {
+    qCDebug(lcHttpServerHttp2Handler)
+            << "Closed stream" << streamId << "from client" << parser.getClientIpAddressAndPort();
     auto connections = m_streamConnections.take(streamId);
     for (auto &c : connections)
         disconnect(c);
 
     m_streamQueue.remove(streamId);
+    auto responder = m_responders.take(streamId);
+    if (responder)
+        responder->cancel();
+    m_streamData.remove(streamId);
+}
+
+void QHttpServerHttp2ProtocolHandler::onHeadersReceived(quint32 streamId,
+                                                        const HPack::HttpHeader &headers)
+{
+    auto stream = m_connection->getStream(streamId);
+    Q_ASSERT(stream);
+    if (!stream)
+        return;
+
+    auto &metaData = m_streamData[streamId];
+    if (metaData.done) {
+        if (headers.size() > 0) {
+            qCDebug(lcHttpServerHttp2Handler)
+                    << "Discarding received headers on stream" << streamId
+                    << "closed by server from client" << parser.getClientIpAddressAndPort();
+        }
+        return;
+    }
+
+    metaData.numberOfHeaders += headers.size();
+    if (!m_filter->isNumberOfHeaderFieldsAllowed(metaData.numberOfHeaders)) {
+        write(QHttpServerResponder::StatusCode::RequestHeaderFieldsTooLarge, streamId);
+        metaData.done = true;
+        qCDebug(lcHttpServerHttp2Handler)
+                << "Number of header fields, currently at" << metaData.numberOfHeaders
+                << "is too large for stream" << streamId << "from client"
+                << parser.getClientIpAddressAndPort();
+        return;
+    }
+
+    qsizetype size = 0;
+    for (auto &header : headers) {
+        if (header.name == ":path") {
+            if (!m_filter->isUrlSizeAllowed(header.value.size())) {
+                write(QHttpServerResponder::StatusCode::UriTooLong, streamId);
+                metaData.done = true;
+                qCDebug(lcHttpServerHttp2Handler)
+                        << "URI too long at" << header.value.size() << "bytes for stream"
+                        << streamId << "from client" << parser.getClientIpAddressAndPort();
+                return;
+            }
+        }
+
+        qsizetype headerFieldSize = header.name.size() + header.value.size();
+        if (!m_filter->isHeaderFieldSizeAllowed(headerFieldSize)) {
+            write(QHttpServerResponder::StatusCode::RequestHeaderFieldsTooLarge, streamId);
+            metaData.done = true;
+            QByteArrayView name(header.name.data(), qMin(50, header.name.size()));
+            qCDebug(lcHttpServerHttp2Handler)
+                    << "Header field" << name << "too large for stream" << streamId << "at"
+                    << headerFieldSize << "bytes from client" << parser.getClientIpAddressAndPort();
+            return;
+        }
+        size += headerFieldSize;
+    }
+
+    metaData.headersSize += size;
+    if (!m_filter->isTotalHeaderSizeAllowed(metaData.headersSize)) {
+        write(QHttpServerResponder::StatusCode::RequestHeaderFieldsTooLarge, streamId);
+        metaData.done = true;
+        qCDebug(lcHttpServerHttp2Handler) << "Total header size too large, currently at"
+                                          << metaData.headersSize << "bytes, for stream" << streamId
+                                          << "from client" << parser.getClientIpAddressAndPort();
+    }
+}
+
+void QHttpServerHttp2ProtocolHandler::onDataReceived(quint32 streamId, qsizetype size)
+{
+    auto stream = m_connection->getStream(streamId);
+    Q_ASSERT(stream);
+    if (!stream)
+        return;
+
+    auto &metaData = m_streamData[streamId];
+    if (metaData.done) {
+        if (size > 0) {
+            stream->clearDownloadBuffer();
+            qCDebug(lcHttpServerHttp2Handler)
+                    << "Discarding received data on stream" << streamId
+                    << "closed by server from client" << parser.getClientIpAddressAndPort();
+        }
+        return;
+    }
+
+    metaData.dataSize += size;
+    if (!m_filter->isBodySizeAllowed(metaData.dataSize)) {
+        write(QHttpServerResponder::StatusCode::PayloadTooLarge, streamId);
+        metaData.done = true;
+        stream->clearDownloadBuffer();
+        qCDebug(lcHttpServerHttp2Handler)
+                << "Body too large, currently at" << metaData.dataSize << "bytes, for stream"
+                << streamId << "from client" << parser.getClientIpAddressAndPort();
+    }
+}
+
+void QHttpServerHttp2ProtocolHandler::checkKeepAliveTimeout()
+{
+    if (m_streamQueue.size() > 0 || m_responderCounter > 0)
+        return;
+
+    if (lastActiveTimer.durationElapsed() > m_server->configuration().keepAliveTimeout()) {
+        m_connection->close();
+        m_tcpSocket->abort();
+    }
 }
 
 void QHttpServerHttp2ProtocolHandler::sendToStream(quint32 streamId)

@@ -1,12 +1,18 @@
 // Copyright (C) 2024 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
+// Qt-Security score:significant reason:default
 
 #ifndef QHttpServerHttp1ProtocolHandler_H
 #define QHttpServerHttp1ProtocolHandler_H
 
 #include <QtHttpServer/qthttpserverglobal.h>
+#include <QtHttpServer/qhttpserverconfiguration.h>
 #include <QtHttpServer/qhttpserverrequest.h>
+#include <QtHttpServer/private/qhttpserverparser_p.h>
 #include <QtHttpServer/private/qhttpserverstream_p.h>
+#include <QtHttpServer/private/qhttpserverrequestfilter_p.h>
+
+#include <QtCore/qelapsedtimer.h>
 
 //
 //  W A R N I N G
@@ -25,6 +31,8 @@ class QAbstractHttpServer;
 #if QT_CONFIG(localserver)
 class QLocalSocket;
 #endif
+template <qint64 BUFFERSIZE>
+struct QHttpServerHttp1IOChunkedTransfer;
 
 class QHttpServerHttp1ProtocolHandler : public QHttpServerStream
 {
@@ -34,9 +42,11 @@ class QHttpServerHttp1ProtocolHandler : public QHttpServerStream
     friend class QHttpServerResponder;
 
 private:
-    QHttpServerHttp1ProtocolHandler(QAbstractHttpServer *server, QIODevice *socket);
+    QHttpServerHttp1ProtocolHandler(QAbstractHttpServer *server, QIODevice *socket,
+                                    QHttpServerRequestFilter *filter,
+                                    QHttpServerConfiguration *config);
 
-    void responderDestroyed() final;
+    void responderDestroyed(quint32 streamId) final;
     void startHandlingRequest() final;
     void socketDisconnected() final;
 
@@ -61,24 +71,38 @@ private:
     void write(const QByteArray &data);
     void write(const char *body, qint64 size);
 
+    void addConnectionAndKeepAliveHeaders(QHttpHeaders &headers);
+    void checkKeepAliveTimeout();
+    void resumeListening();
+    void closeConnection();
+
     QAbstractHttpServer *server;
     QIODevice *socket;
     QTcpSocket *tcpSocket;
 #if QT_CONFIG(localserver)
     QLocalSocket *localSocket;
 #endif
+    QHttpServerRequestFilter *m_filter;
+    QHttpServerConfiguration *m_configuration;
 
     enum class TransferState {
         Ready,
         HeadersSent,
-        ChunkedTransferBegun
+        ChunkedTransferBegun,
+        IODeviceTransferBegun,
     } state = TransferState::Ready;
-
-    QHttpServerRequest request;
 
    // To avoid destroying the object when socket object is destroyed while
    // a request is still being handled.
     bool handlingRequest = false;
+    bool protocolChanged = false;
+    QElapsedTimer lastActiveTimer;
+    bool useHttp1_1 = false;
+    bool keepAlive = true;
+    void completeWriting();
+
+    template <qint64 BUFFERSIZE>
+    friend struct QHttpServerHttp1IOChunkedTransfer;
 };
 
 QT_END_NAMESPACE

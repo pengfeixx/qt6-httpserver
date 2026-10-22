@@ -1,158 +1,204 @@
-# SymbolsHelper-Confirmed: 6.8.0 amd64
+# SymbolsHelper-Confirmed: 6.12.0 amd64
 libQt6HttpServer.so.6 libqt6httpserver6 #MINVER#
-
- Qt_6@Qt_6 6.8.0
- Qt_6_PRIVATE_API@Qt_6_PRIVATE_API 6.8.0
-
- _ZN11QHttpServer11qt_metacallEN11QMetaObject4CallEiPPv@Qt_6 6.8.0
- _ZN11QHttpServer11qt_metacastEPKc@Qt_6 6.8.0
- _ZN11QHttpServer12sendResponseEO19QHttpServerResponseRK18QHttpServerRequestO20QHttpServerResponder@Qt_6 6.8.0
- _ZN11QHttpServer12sendResponseEO7QFutureI19QHttpServerResponseERK18QHttpServerRequestO20QHttpServerResponder@Qt_6 6.8.0
- _ZN11QHttpServer13handleRequestERK18QHttpServerRequestR20QHttpServerResponder@Qt_6 6.8.0
-
-
- _ZN11QHttpServer16staticMetaObjectE@Qt_6 6.8.0
-
- _ZN11QHttpServer6routerEv@Qt_6 6.8.0
- _ZN11QHttpServerC1EP7QObject@Qt_6 6.8.0
- _ZN11QHttpServerC2EP7QObject@Qt_6 6.8.0
- _ZN11QHttpServerD0Ev@Qt_6 6.8.0
- _ZN11QHttpServerD1Ev@Qt_6 6.8.0
- _ZN11QHttpServerD2Ev@Qt_6 6.8.0
- _ZN17QHttpServerRouter11addRuleImplESt10unique_ptrI21QHttpServerRouterRuleSt14default_deleteIS1_EESt16initializer_listI9QMetaTypeE@Qt_6 6.8.0
- _ZN17QHttpServerRouter12addConverterE9QMetaType14QAnyStringView@Qt_6 6.8.0
- _ZN17QHttpServerRouter15clearConvertersEv@Qt_6 6.8.0
- _ZN17QHttpServerRouter15removeConverterE9QMetaType@Qt_6 6.8.0
-
-
- _ZN17QHttpServerRouterD1Ev@Qt_6 6.8.0
- _ZN17QHttpServerRouterD2Ev@Qt_6 6.8.0
- _ZN18QHttpServerRequest16staticMetaObjectE@Qt_6 6.8.0
- _ZN18QHttpServerRequestC1ERK12QHostAddresstS2_t@Qt_6 6.8.0
- _ZN18QHttpServerRequestC2ERK12QHostAddresstS2_t@Qt_6 6.8.0
- _ZN18QHttpServerRequestD1Ev@Qt_6 6.8.0
- _ZN18QHttpServerRequestD2Ev@Qt_6 6.8.0
- _ZN19QAbstractHttpServer11qt_metacallEN11QMetaObject4CallEiPPv@Qt_6 6.8.0
- _ZN19QAbstractHttpServer11qt_metacastEPKc@Qt_6 6.8.0
-
- _ZN19QAbstractHttpServer16staticMetaObjectE@Qt_6 6.8.0
- _ZN19QAbstractHttpServer22newWebSocketConnectionEv@Qt_6 6.8.0
- _ZN19QAbstractHttpServer30nextPendingWebSocketConnectionEv@Qt_6 6.8.0
- _ZN19QAbstractHttpServer4bindEP10QTcpServer@Qt_6 6.8.0
-
-
-
- _ZN19QAbstractHttpServerC1EP7QObject@Qt_6 6.8.0
- _ZN19QAbstractHttpServerC1ER26QAbstractHttpServerPrivateP7QObject@Qt_6_PRIVATE_API 6.8.0
- _ZN19QAbstractHttpServerC2EP7QObject@Qt_6 6.8.0
- _ZN19QAbstractHttpServerC2ER26QAbstractHttpServerPrivateP7QObject@Qt_6_PRIVATE_API 6.8.0
- _ZN19QAbstractHttpServerD0Ev@Qt_6 6.8.0
- _ZN19QAbstractHttpServerD1Ev@Qt_6 6.8.0
- _ZN19QAbstractHttpServerD2Ev@Qt_6 6.8.0
-
-
-
-
- _ZN19QHttpServerResponse8fromFileERK7QString@Qt_6 6.8.0
-
-
-
-
-
-
-
-
- _ZN19QHttpServerResponseC1EN20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC1EO10QByteArrayN20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
-
-
-
- _ZN19QHttpServerResponseC1EPKcN20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC1ERK10QByteArrayN20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC1ERK10QByteArrayOS0_N20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC1ERK10QByteArrayS2_N20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC1ERK10QJsonArrayN20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC1ERK11QJsonObjectN20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC1ERK7QStringN20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC2EN20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC2EO10QByteArrayN20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
-
-
-
- _ZN19QHttpServerResponseC2EPKcN20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC2ERK10QByteArrayN20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC2ERK10QByteArrayOS0_N20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC2ERK10QByteArrayS2_N20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC2ERK10QJsonArrayN20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC2ERK11QJsonObjectN20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseC2ERK7QStringN20QHttpServerResponder10StatusCodeE@Qt_6 6.8.0
- _ZN19QHttpServerResponseD1Ev@Qt_6 6.8.0
- _ZN19QHttpServerResponseD2Ev@Qt_6 6.8.0
-
-
- _ZN20QHttpServerResponder12sendResponseERK19QHttpServerResponse@Qt_6 6.8.0
-
-
- _ZN20QHttpServerResponder16staticMetaObjectE@Qt_6 6.8.0
- _ZN20QHttpServerResponder5writeENS_10StatusCodeE@Qt_6 6.8.0
- _ZN20QHttpServerResponder5writeEP9QIODeviceRK10QByteArrayNS_10StatusCodeE@Qt_6 6.8.0
-
- _ZN20QHttpServerResponder5writeERK10QByteArrayS2_NS_10StatusCodeE@Qt_6 6.8.0
-
- _ZN20QHttpServerResponder5writeERK13QJsonDocumentNS_10StatusCodeE@Qt_6 6.8.0
-
-
-
-
-
-
- _ZN20QHttpServerResponderC1EP17QHttpServerStream@Qt_6_PRIVATE_API 6.8.0
-
- _ZN20QHttpServerResponderC2EP17QHttpServerStream@Qt_6_PRIVATE_API 6.8.0
- _ZN20QHttpServerResponderD1Ev@Qt_6 6.8.0
- _ZN20QHttpServerResponderD2Ev@Qt_6 6.8.0
- _ZN21QHttpServerRouterRule16createPathRegexpESt16initializer_listI9QMetaTypeERK5QHashIS1_7QStringE@Qt_6 6.8.0
- _ZN21QHttpServerRouterRuleC1EP28QHttpServerRouterRulePrivate@Qt_6_PRIVATE_API 6.8.0
-
-
- _ZN21QHttpServerRouterRuleC2EP28QHttpServerRouterRulePrivate@Qt_6_PRIVATE_API 6.8.0
-
-
- _ZN21QHttpServerRouterRuleD0Ev@Qt_6 6.8.0
- _ZN21QHttpServerRouterRuleD1Ev@Qt_6 6.8.0
- _ZN21QHttpServerRouterRuleD2Ev@Qt_6 6.8.0
- _ZNK11QHttpServer10metaObjectEv@Qt_6 6.8.0
-
- _ZNK17QHttpServerRouter13handleRequestERK18QHttpServerRequestR20QHttpServerResponder@Qt_6 6.8.0
- _ZNK18QHttpServerRequest10remotePortEv@Qt_6 6.8.0
- _ZNK18QHttpServerRequest12localAddressEv@Qt_6 6.8.0
- _ZNK18QHttpServerRequest13remoteAddressEv@Qt_6 6.8.0
- _ZNK18QHttpServerRequest3urlEv@Qt_6 6.8.0
- _ZNK18QHttpServerRequest4bodyEv@Qt_6 6.8.0
- _ZNK18QHttpServerRequest5queryEv@Qt_6 6.8.0
- _ZNK18QHttpServerRequest5valueERK10QByteArray@Qt_6 6.8.0
- _ZNK18QHttpServerRequest6methodEv@Qt_6 6.8.0
-
- _ZNK18QHttpServerRequest9localPortEv@Qt_6 6.8.0
- _ZNK19QAbstractHttpServer10metaObjectEv@Qt_6 6.8.0
- _ZNK19QAbstractHttpServer30hasPendingWebSocketConnectionsEv@Qt_6 6.8.0
- _ZNK19QAbstractHttpServer7serversEv@Qt_6 6.8.0
- _ZNK19QHttpServerResponse10statusCodeEv@Qt_6 6.8.0
- _ZNK19QHttpServerResponse4dataEv@Qt_6 6.8.0
-
- _ZNK19QHttpServerResponse8mimeTypeEv@Qt_6 6.8.0
-
-
- _ZNK21QHttpServerRouterRule15hasValidMethodsEv@Qt_6 6.8.0
- _ZNK21QHttpServerRouterRule4execERK18QHttpServerRequestR20QHttpServerResponder@Qt_6 6.8.0
- _ZNK21QHttpServerRouterRule7matchesERK18QHttpServerRequestP23QRegularExpressionMatch@Qt_6 6.8.0
- _ZTI11QHttpServer@Qt_6 6.8.0
- _ZTI19QAbstractHttpServer@Qt_6 6.8.0
- _ZTI21QHttpServerRouterRule@Qt_6 6.8.0
- _ZTS11QHttpServer@Qt_6 6.8.0
- _ZTS19QAbstractHttpServer@Qt_6 6.8.0
- _ZTS21QHttpServerRouterRule@Qt_6 6.8.0
- _ZTV11QHttpServer@Qt_6 6.8.0
- _ZTV19QAbstractHttpServer@Qt_6 6.8.0
- _ZTV21QHttpServerRouterRule@Qt_6 6.8.0
- _Zls6QDebugRK18QHttpServerRequest@Qt_6 6.8.0
+ NonQt@NonQt 6.12.0
+ Qt_6@Qt_6 6.12.0
+ Qt_6_PRIVATE_API@Qt_6_PRIVATE_API 6.12.0
+ _Z13comparesEqualRK24QHttpServerConfigurationS1_@Qt_6 6.12.0
+ _ZN11QHttpServer11qt_metacallEN11QMetaObject4CallEiPPv@Qt_6 6.12.0
+ _ZN11QHttpServer11qt_metacastEPKc@Qt_6 6.12.0
+ _ZN11QHttpServer12sendResponseEO19QHttpServerResponseRK18QHttpServerRequestO20QHttpServerResponder@Qt_6 6.12.0
+ _ZN11QHttpServer12sendResponseEO7QFutureI19QHttpServerResponseERK18QHttpServerRequestO20QHttpServerResponder@Qt_6 6.12.0
+ _ZN11QHttpServer13handleRequestERK18QHttpServerRequestR20QHttpServerResponder@Qt_6 6.12.0
+ _ZN11QHttpServer14missingHandlerERK18QHttpServerRequestR20QHttpServerResponder@Qt_6 6.12.0
+ _ZN11QHttpServer16staticMetaObjectE@Qt_6 6.12.0
+ _ZN11QHttpServer19clearMissingHandlerEv@Qt_6 6.12.0
+ _ZN11QHttpServer21setMissingHandlerImplEPK7QObjectPN9QtPrivate15QSlotObjectBaseE@Qt_6 6.12.0
+ _ZN11QHttpServer26addAfterRequestHandlerImplEPK7QObjectPN9QtPrivate15QSlotObjectBaseE@Qt_6 6.12.0
+ _ZN11QHttpServer6routerEv@Qt_6 6.12.0
+ _ZN11QHttpServerC1EP7QObject@Qt_6 6.12.0
+ _ZN11QHttpServerC2EP7QObject@Qt_6 6.12.0
+ _ZN11QHttpServerD0Ev@Qt_6 6.12.0
+ _ZN11QHttpServerD1Ev@Qt_6 6.12.0
+ _ZN11QHttpServerD2Ev@Qt_6 6.12.0
+ _ZN17QHttpServerRouter11addRuleImplESt10unique_ptrI21QHttpServerRouterRuleSt14default_deleteIS1_EESt16initializer_listI9QMetaTypeE@Qt_6 6.12.0
+ _ZN17QHttpServerRouter12addConverterE9QMetaType14QAnyStringView@Qt_6 6.12.0
+ _ZN17QHttpServerRouter15clearConvertersEv@Qt_6 6.12.0
+ _ZN17QHttpServerRouter15removeConverterE9QMetaType@Qt_6 6.12.0
+ _ZN17QHttpServerRouterC1EP19QAbstractHttpServer@Qt_6 6.12.0
+ _ZN17QHttpServerRouterC2EP19QAbstractHttpServer@Qt_6 6.12.0
+ _ZN17QHttpServerRouterD1Ev@Qt_6 6.12.0
+ _ZN17QHttpServerRouterD2Ev@Qt_6 6.12.0
+ _ZN18QHttpServerRequest16staticMetaObjectE@Qt_6 6.12.0
+ _ZN18QHttpServerRequest6createERK17QHttpServerParser@Qt_6_PRIVATE_API 6.12.0
+ _ZN18QHttpServerRequest6createERK17QHttpServerParserRK17QSslConfiguration@Qt_6_PRIVATE_API 6.12.0
+ _ZN18QHttpServerRequestC1ERK12QHostAddresstS2_t@Qt_6 6.12.0
+ _ZN18QHttpServerRequestC1ERK12QHostAddresstS2_tRK17QSslConfiguration@Qt_6 6.12.0
+ _ZN18QHttpServerRequestC1ERKS_@Qt_6 6.12.0
+ _ZN18QHttpServerRequestC1Ev@Qt_6 6.12.0
+ _ZN18QHttpServerRequestC2ERK12QHostAddresstS2_t@Qt_6 6.12.0
+ _ZN18QHttpServerRequestC2ERK12QHostAddresstS2_tRK17QSslConfiguration@Qt_6 6.12.0
+ _ZN18QHttpServerRequestC2ERKS_@Qt_6 6.12.0
+ _ZN18QHttpServerRequestC2Ev@Qt_6 6.12.0
+ _ZN18QHttpServerRequestD1Ev@Qt_6 6.12.0
+ _ZN18QHttpServerRequestD2Ev@Qt_6 6.12.0
+ _ZN18QHttpServerRequestaSERKS_@Qt_6 6.12.0
+ _ZN19QAbstractHttpServer11qt_metacallEN11QMetaObject4CallEiPPv@Qt_6 6.12.0
+ _ZN19QAbstractHttpServer11qt_metacastEPKc@Qt_6 6.12.0
+ _ZN19QAbstractHttpServer16setConfigurationERK24QHttpServerConfiguration@Qt_6 6.12.0
+ _ZN19QAbstractHttpServer16staticMetaObjectE@Qt_6 6.12.0
+ _ZN19QAbstractHttpServer21setHttp2ConfigurationERK19QHttp2Configuration@Qt_6 6.12.0
+ _ZN19QAbstractHttpServer22newWebSocketConnectionEv@Qt_6 6.12.0
+ _ZN19QAbstractHttpServer30nextPendingWebSocketConnectionEv@Qt_6 6.12.0
+ _ZN19QAbstractHttpServer31addWebSocketUpgradeVerifierImplEPK7QObjectPN9QtPrivate15QSlotObjectBaseE@Qt_6 6.12.0
+ _ZN19QAbstractHttpServer4bindEP10QTcpServer@Qt_6 6.12.0
+ _ZN19QAbstractHttpServer4bindEP12QLocalServer@Qt_6 6.12.0
+ _ZN19QAbstractHttpServerC1EP7QObject@Qt_6 6.12.0
+ _ZN19QAbstractHttpServerC1ER26QAbstractHttpServerPrivateP7QObject@Qt_6_PRIVATE_API 6.12.0
+ _ZN19QAbstractHttpServerC2EP7QObject@Qt_6 6.12.0
+ _ZN19QAbstractHttpServerC2ER26QAbstractHttpServerPrivateP7QObject@Qt_6_PRIVATE_API 6.12.0
+ _ZN19QAbstractHttpServerD0Ev@Qt_6 6.12.0
+ _ZN19QAbstractHttpServerD1Ev@Qt_6 6.12.0
+ _ZN19QAbstractHttpServerD2Ev@Qt_6 6.12.0
+ _ZN19QHttpServerResponse10setHeadersEO12QHttpHeaders@Qt_6 6.12.0
+ _ZN19QHttpServerResponse10setHeadersERK12QHttpHeaders@Qt_6 6.12.0
+ _ZN19QHttpServerResponse8fromFileERK7QString@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC1EN20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC1EO10QByteArrayN20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC1EPKcN20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC1ERK10QByteArrayN20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC1ERK10QByteArrayOS0_N20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC1ERK10QByteArrayS2_N20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC1ERK10QJsonArrayN20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC1ERK11QJsonObjectN20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC1ERK7QStringN20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC2EN20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC2EO10QByteArrayN20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC2EPKcN20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC2ERK10QByteArrayN20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC2ERK10QByteArrayOS0_N20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC2ERK10QByteArrayS2_N20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC2ERK10QJsonArrayN20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC2ERK11QJsonObjectN20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseC2ERK7QStringN20QHttpServerResponder10StatusCodeE@Qt_6 6.12.0
+ _ZN19QHttpServerResponseD1Ev@Qt_6 6.12.0
+ _ZN19QHttpServerResponseD2Ev@Qt_6 6.12.0
+ _ZN20QHttpServerResponder10writeChunkERK10QByteArray@Qt_6 6.12.0
+ _ZN20QHttpServerResponder12sendResponseERK19QHttpServerResponse@Qt_6 6.12.0
+ _ZN20QHttpServerResponder15writeEndChunkedERK10QByteArray@Qt_6 6.12.0
+ _ZN20QHttpServerResponder15writeEndChunkedERK10QByteArrayRK12QHttpHeaders@Qt_6 6.12.0
+ _ZN20QHttpServerResponder16staticMetaObjectE@Qt_6 6.12.0
+ _ZN20QHttpServerResponder17writeBeginChunkedERK10QByteArrayNS_10StatusCodeE@Qt_6 6.12.0
+ _ZN20QHttpServerResponder17writeBeginChunkedERK12QHttpHeaders5QListINS0_15WellKnownHeaderEENS_10StatusCodeE@Qt_6 6.12.0
+ _ZN20QHttpServerResponder17writeBeginChunkedERK12QHttpHeadersNS_10StatusCodeE@Qt_6 6.12.0
+ _ZN20QHttpServerResponder5writeENS_10StatusCodeE@Qt_6 6.12.0
+ _ZN20QHttpServerResponder5writeEP9QIODeviceRK10QByteArrayNS_10StatusCodeE@Qt_6 6.12.0
+ _ZN20QHttpServerResponder5writeEP9QIODeviceRK12QHttpHeadersNS_10StatusCodeE@Qt_6 6.12.0
+ _ZN20QHttpServerResponder5writeERK10QByteArrayRK12QHttpHeadersNS_10StatusCodeE@Qt_6 6.12.0
+ _ZN20QHttpServerResponder5writeERK10QByteArrayS2_NS_10StatusCodeE@Qt_6 6.12.0
+ _ZN20QHttpServerResponder5writeERK12QHttpHeadersNS_10StatusCodeE@Qt_6 6.12.0
+ _ZN20QHttpServerResponder5writeERK13QJsonDocumentNS_10StatusCodeE@Qt_6 6.12.0
+ _ZN20QHttpServerResponder5writeERK13QJsonDocumentRK12QHttpHeadersNS_10StatusCodeE@Qt_6 6.12.0
+ _ZN20QHttpServerResponderC1EP17QHttpServerStream@Qt_6_PRIVATE_API 6.12.0
+ _ZN20QHttpServerResponderC2EP17QHttpServerStream@Qt_6_PRIVATE_API 6.12.0
+ _ZN20QHttpServerResponderD1Ev@Qt_6 6.12.0
+ _ZN20QHttpServerResponderD2Ev@Qt_6 6.12.0
+ _ZN21QHttpServerRouterRule16createPathRegexpESt16initializer_listI9QMetaTypeERK5QHashIS1_7QStringE@Qt_6 6.12.0
+ _ZN21QHttpServerRouterRuleC1EP28QHttpServerRouterRulePrivate@Qt_6_PRIVATE_API 6.12.0
+ _ZN21QHttpServerRouterRuleC1ERK7QString6QFlagsIN18QHttpServerRequest6MethodEEPK7QObjectPN9QtPrivate15QSlotObjectBaseE@Qt_6 6.12.0
+ _ZN21QHttpServerRouterRuleC2EP28QHttpServerRouterRulePrivate@Qt_6_PRIVATE_API 6.12.0
+ _ZN21QHttpServerRouterRuleC2ERK7QString6QFlagsIN18QHttpServerRequest6MethodEEPK7QObjectPN9QtPrivate15QSlotObjectBaseE@Qt_6 6.12.0
+ _ZN21QHttpServerRouterRuleD0Ev@Qt_6 6.12.0
+ _ZN21QHttpServerRouterRuleD1Ev@Qt_6 6.12.0
+ _ZN21QHttpServerRouterRuleD2Ev@Qt_6 6.12.0
+ _ZN24QHttpServerConfiguration12setBlacklistE5QSpanIKSt4pairI12QHostAddressiELm18446744073709551615EE@Qt_6 6.12.0
+ _ZN24QHttpServerConfiguration12setWhitelistE5QSpanIKSt4pairI12QHostAddressiELm18446744073709551615EE@Qt_6 6.12.0
+ _ZN24QHttpServerConfiguration17setMaximumUrlSizeEx@Qt_6 6.12.0
+ _ZN24QHttpServerConfiguration18setMaximumBodySizeEx@Qt_6 6.12.0
+ _ZN24QHttpServerConfiguration19setKeepAliveTimeoutENSt6chrono8durationIlSt5ratioILl1ELl1EEEE@Qt_6 6.12.0
+ _ZN24QHttpServerConfiguration21setMaximumConnectionsEj@Qt_6 6.12.0
+ _ZN24QHttpServerConfiguration21setRateLimitPerSecondEj@Qt_6 6.12.0
+ _ZN24QHttpServerConfiguration25setMaximumHeaderFieldSizeEx@Qt_6 6.12.0
+ _ZN24QHttpServerConfiguration25setMaximumTotalHeaderSizeEx@Qt_6 6.12.0
+ _ZN24QHttpServerConfiguration26setMaximumHeaderFieldCountEx@Qt_6 6.12.0
+ _ZN24QHttpServerConfiguration28setMaximumConnectionsPerHostEj@Qt_6 6.12.0
+ _ZN24QHttpServerConfigurationC1ERKS_@Qt_6 6.12.0
+ _ZN24QHttpServerConfigurationC1Ev@Qt_6 6.12.0
+ _ZN24QHttpServerConfigurationC2ERKS_@Qt_6 6.12.0
+ _ZN24QHttpServerConfigurationC2Ev@Qt_6 6.12.0
+ _ZN24QHttpServerConfigurationD1Ev@Qt_6 6.12.0
+ _ZN24QHttpServerConfigurationD2Ev@Qt_6 6.12.0
+ _ZN24QHttpServerConfigurationaSERKS_@Qt_6 6.12.0
+ _ZN24QHttpServerRequestFilter16setConfigurationERK24QHttpServerConfiguration@Qt_6_PRIVATE_API 6.12.0
+ _ZN24QHttpServerRequestFilter19isRequestWithinRateERK12QHostAddress@Qt_6_PRIVATE_API 6.12.0
+ _ZN24QHttpServerRequestFilter19isRequestWithinRateERK12QHostAddressx@Qt_6_PRIVATE_API 6.12.0
+ _ZN31QHttpServerRequestFilterPrivate19cPeriodDurationMSecE@Qt_6 6.12.0
+ _ZN35QHttpServerWebSocketUpgradeResponse10passToNextEv@Qt_6 6.12.0
+ _ZN35QHttpServerWebSocketUpgradeResponse4denyEi10QByteArray@Qt_6 6.12.0
+ _ZN35QHttpServerWebSocketUpgradeResponse4denyEv@Qt_6 6.12.0
+ _ZN35QHttpServerWebSocketUpgradeResponse6acceptEv@Qt_6 6.12.0
+ _ZN35QHttpServerWebSocketUpgradeResponseC1ERKS_@Qt_6 6.12.0
+ _ZN35QHttpServerWebSocketUpgradeResponseC2ERKS_@Qt_6 6.12.0
+ _ZN35QHttpServerWebSocketUpgradeResponseD1Ev@Qt_6 6.12.0
+ _ZN35QHttpServerWebSocketUpgradeResponseD2Ev@Qt_6 6.12.0
+ _ZN35QHttpServerWebSocketUpgradeResponseaSERKS_@Qt_6 6.12.0
+ _ZNK11QHttpServer10metaObjectEv@Qt_6 6.12.0
+ _ZNK11QHttpServer6routerEv@Qt_6 6.12.0
+ _ZNK17QHttpServerRouter13handleRequestERK18QHttpServerRequestR20QHttpServerResponder@Qt_6 6.12.0
+ _ZNK18QHttpServerRequest10remotePortEv@Qt_6 6.12.0
+ _ZNK18QHttpServerRequest12localAddressEv@Qt_6 6.12.0
+ _ZNK18QHttpServerRequest13remoteAddressEv@Qt_6 6.12.0
+ _ZNK18QHttpServerRequest16sslConfigurationEv@Qt_6 6.12.0
+ _ZNK18QHttpServerRequest3urlEv@Qt_6 6.12.0
+ _ZNK18QHttpServerRequest4bodyEv@Qt_6 6.12.0
+ _ZNK18QHttpServerRequest5queryEv@Qt_6 6.12.0
+ _ZNK18QHttpServerRequest5valueERK10QByteArray@Qt_6 6.12.0
+ _ZNK18QHttpServerRequest6methodEv@Qt_6 6.12.0
+ _ZNK18QHttpServerRequest9localPortEv@Qt_6 6.12.0
+ _ZNK19QAbstractHttpServer10metaObjectEv@Qt_6 6.12.0
+ _ZNK19QAbstractHttpServer11serverPortsEv@Qt_6 6.12.0
+ _ZNK19QAbstractHttpServer12localServersEv@Qt_6 6.12.0
+ _ZNK19QAbstractHttpServer13configurationEv@Qt_6 6.12.0
+ _ZNK19QAbstractHttpServer18http2ConfigurationEv@Qt_6 6.12.0
+ _ZNK19QAbstractHttpServer22verifyWebSocketUpgradeERK18QHttpServerRequest@Qt_6 6.12.0
+ _ZNK19QAbstractHttpServer30hasPendingWebSocketConnectionsEv@Qt_6 6.12.0
+ _ZNK19QAbstractHttpServer7serversEv@Qt_6 6.12.0
+ _ZNK19QHttpServerResponse10statusCodeEv@Qt_6 6.12.0
+ _ZNK19QHttpServerResponse4dataEv@Qt_6 6.12.0
+ _ZNK19QHttpServerResponse7headersEv@Qt_6 6.12.0
+ _ZNK19QHttpServerResponse8mimeTypeEv@Qt_6 6.12.0
+ _ZNK20QHttpServerResponder18isResponseCanceledEv@Qt_6 6.12.0
+ _ZNK21QHttpServerRouterRule13contextObjectEv@Qt_6 6.12.0
+ _ZNK21QHttpServerRouterRule15hasValidMethodsEv@Qt_6 6.12.0
+ _ZNK21QHttpServerRouterRule4execERK18QHttpServerRequestR20QHttpServerResponder@Qt_6 6.12.0
+ _ZNK21QHttpServerRouterRule7matchesERK18QHttpServerRequestP23QRegularExpressionMatch@Qt_6 6.12.0
+ _ZNK24QHttpServerConfiguration14maximumUrlSizeEv@Qt_6 6.12.0
+ _ZNK24QHttpServerConfiguration15maximumBodySizeEv@Qt_6 6.12.0
+ _ZNK24QHttpServerConfiguration16keepAliveTimeoutEv@Qt_6 6.12.0
+ _ZNK24QHttpServerConfiguration18maximumConnectionsEv@Qt_6 6.12.0
+ _ZNK24QHttpServerConfiguration18rateLimitPerSecondEv@Qt_6 6.12.0
+ _ZNK24QHttpServerConfiguration22maximumHeaderFieldSizeEv@Qt_6 6.12.0
+ _ZNK24QHttpServerConfiguration22maximumTotalHeaderSizeEv@Qt_6 6.12.0
+ _ZNK24QHttpServerConfiguration23maximumHeaderFieldCountEv@Qt_6 6.12.0
+ _ZNK24QHttpServerConfiguration25maximumConnectionsPerHostEv@Qt_6 6.12.0
+ _ZNK24QHttpServerConfiguration9blacklistEv@Qt_6 6.12.0
+ _ZNK24QHttpServerConfiguration9whitelistEv@Qt_6 6.12.0
+ _ZNK24QHttpServerRequestFilter16isRequestAllowedERK12QHostAddress@Qt_6_PRIVATE_API 6.12.0
+ _ZNK24QHttpServerRequestFilter16isUrlSizeAllowedEx@Qt_6_PRIVATE_API 6.12.0
+ _ZNK24QHttpServerRequestFilter17isBodySizeAllowedEx@Qt_6_PRIVATE_API 6.12.0
+ _ZNK24QHttpServerRequestFilter24isHeaderFieldSizeAllowedEx@Qt_6_PRIVATE_API 6.12.0
+ _ZNK24QHttpServerRequestFilter24isTotalHeaderSizeAllowedEx@Qt_6_PRIVATE_API 6.12.0
+ _ZNK24QHttpServerRequestFilter29isNumberOfHeaderFieldsAllowedEx@Qt_6_PRIVATE_API 6.12.0
+ _ZNKR17QHttpServerRouter10convertersEv@Qt_6 6.12.0
+ _ZNKR18QHttpServerRequest7headersEv@Qt_6 6.12.0
+ _ZNO17QHttpServerRouter10convertersEv@Qt_6 6.12.0
+ _ZNO18QHttpServerRequest7headersEv@Qt_6 6.12.0
+ _ZTI11QHttpServer@Qt_6 6.12.0
+ _ZTI19QAbstractHttpServer@Qt_6 6.12.0
+ _ZTI21QHttpServerRouterRule@Qt_6 6.12.0
+ _ZTS11QHttpServer@Qt_6 6.12.0
+ _ZTS19QAbstractHttpServer@Qt_6 6.12.0
+ _ZTS21QHttpServerRouterRule@Qt_6 6.12.0
+ _ZTV11QHttpServer@Qt_6 6.12.0
+ _ZTV19QAbstractHttpServer@Qt_6 6.12.0
+ _ZTV21QHttpServerRouterRule@Qt_6 6.12.0
+ _Zls6QDebugRK18QHttpServerRequest@Qt_6 6.12.0

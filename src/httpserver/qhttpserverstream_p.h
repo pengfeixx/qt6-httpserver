@@ -1,14 +1,20 @@
 // Copyright (C) 2022 The Qt Company Ltd.
 // SPDX-License-Identifier: LicenseRef-Qt-Commercial OR GPL-3.0-only
+// Qt-Security score:significant reason:default
 
 #ifndef QHTTPSERVERSTREAM_P_H
 #define QHTTPSERVERSTREAM_P_H
 
-#include <QtCore/qobject.h>
-
 #include <QtHttpServer/qthttpserverglobal.h>
 #include <QtHttpServer/qhttpserverresponder.h>
-#include <QtHttpServer/qhttpserverrequest.h>
+#include <QtHttpServer/private/qhttpserverparser_p.h>
+#include <QtHttpServer/private/qhttpserverrequestfilter_p.h>
+
+#if QT_CONFIG(ssl)
+#include <QtNetwork/qsslsocket.h>
+#endif
+
+#include <QtCore/qobject.h>
 
 //
 //  W A R N I N G
@@ -23,17 +29,21 @@
 QT_BEGIN_NAMESPACE
 
 class QTcpSocket;
+class QHttpServerResponderPrivate;
+class QAbstractHttpServerPrivate;
 
 class QHttpServerStream : public QObject
 {
     Q_OBJECT
 
     friend class QHttpServerResponderPrivate;
+    friend class QAbstractHttpServerPrivate;
 
 protected:
-    QHttpServerStream(QObject *parent = nullptr);
+    QHttpServerStream(QIODevice *socket, QHttpServerRequestFilter *filter,
+                      QObject *parent = nullptr);
 
-    virtual void responderDestroyed() = 0;
+    virtual void responderDestroyed(quint32 streamId) = 0;
     virtual void startHandlingRequest() = 0;
     virtual void socketDisconnected() = 0;
 
@@ -51,7 +61,15 @@ protected:
                                  QHttpHeaders &trailers,
                                  quint32 streamId) = 0;
 
-    static QHttpServerRequest initRequestFromSocket(QTcpSocket *socket);
+    void connectResponder(QHttpServerResponderPrivate *responder);
+    void disconnectResponder(quint32 streamId);
+
+    QHttpServerParser parser;
+#if QT_CONFIG(ssl)
+    QSslConfiguration sslConfiguration;
+#endif
+    QHash<quint32, QMetaObject::Connection> responderConnections;
+    QIODevice *clientSocket;
 };
 
 QT_END_NAMESPACE
